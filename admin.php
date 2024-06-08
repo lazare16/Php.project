@@ -10,11 +10,6 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
-// Debug: Print session data
-// echo '<pre>';
-// print_r($_SESSION);
-// echo '</pre>';
-
 // Handle PDF upload
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['upload_pdf'])) {
     $title = $_POST['title'];
@@ -89,8 +84,44 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_pdf'])) {
     $stmt->close();
 }
 
+// Handle category deletion
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_category'])) {
+    $category_id = $_POST['category_id'];
+
+    $stmt = $conn->prepare("DELETE FROM categories WHERE id = ?");
+    $stmt->bind_param("i", $category_id);
+
+    if ($stmt->execute()) {
+        echo "Category deleted successfully.";
+    } else {
+        echo "Error: " . $stmt->error;
+    }
+
+    $stmt->close();
+}
+
+// Handle category update
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_category'])) {
+    $category_id = $_POST['category_id'];
+    $category_name = $_POST['category_name'];
+
+    $stmt = $conn->prepare("UPDATE categories SET name = ? WHERE id = ?");
+    $stmt->bind_param("si", $category_name, $category_id);
+
+    if ($stmt->execute()) {
+        echo "Category updated successfully.";
+    } else {
+        echo "Error: " . $stmt->error;
+    }
+
+    $stmt->close();
+}
+
 // Fetch and display PDFs
-$result = $conn->query("SELECT pdfs.*, categories.name AS category_name FROM pdfs JOIN categories ON pdfs.category_id = categories.id");
+$result_pdfs = $conn->query("SELECT pdfs.*, categories.name AS category_name FROM pdfs JOIN categories ON pdfs.category_id = categories.id");
+
+// Fetch and display categories
+$result_categories = $conn->query("SELECT * FROM categories");
 
 ?>
 
@@ -101,6 +132,8 @@ $result = $conn->query("SELECT pdfs.*, categories.name AS category_name FROM pdf
 </head>
 <body>
     <h1>Admin Panel</h1>
+    
+    <h2>Upload PDF</h2>
     <form method="post" action="">
         <input type="text" name="title" placeholder="PDF Title" required>
         <input type="url" name="file_path" placeholder="PDF URL" required>
@@ -114,9 +147,9 @@ $result = $conn->query("SELECT pdfs.*, categories.name AS category_name FROM pdf
         </select>
         <button type="submit" name="upload_pdf">Upload PDF</button>
     </form>
-    
+
     <h2>Existing PDFs</h2>
-    <?php if ($result->num_rows > 0) { ?>
+    <?php if ($result_pdfs->num_rows > 0) { ?>
         <table>
             <thead>
                 <tr>
@@ -127,7 +160,7 @@ $result = $conn->query("SELECT pdfs.*, categories.name AS category_name FROM pdf
                 </tr>
             </thead>
             <tbody>
-                <?php while ($pdf = $result->fetch_assoc()) { ?>
+                <?php while ($pdf = $result_pdfs->fetch_assoc()) { ?>
                     <tr>
                         <td><?php echo $pdf['title']; ?></td>
                         <td><?php echo $pdf['category_name']; ?></td>
@@ -163,6 +196,47 @@ $result = $conn->query("SELECT pdfs.*, categories.name AS category_name FROM pdf
     <?php } else { ?>
         <p>No PDFs available.</p>
     <?php } ?>
+
+    <h2>Manage Categories</h2>
+    <form method="post" action="">
+        <input type="text" name="category_name" placeholder="Category Name" required>
+        <button type="submit" name="add_category">Add Category</button>
+    </form>
+
+    <h2>Existing Categories</h2>
+    <?php if ($result_categories->num_rows > 0) { ?>
+        <table>
+            <thead>
+                <tr>
+                    <th>Category Name</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php while ($category = $result_categories->fetch_assoc()) { ?>
+                    <tr>
+                        <td><?php echo $category['name']; ?></td>
+                        <td>
+                            <form method="post" action="" style="display:inline;">
+                                <input type="hidden" name="delete_category" value="1">
+                                <input type="hidden" name="category_id" value="<?php echo $category['id']; ?>">
+                                <button type="submit">Delete</button>
+                            </form>
+                            <form method="post" action="" style="display:inline;">
+                                <input type="hidden" name="edit_category" value="1">
+                                <input type="hidden" name="category_id" value="<?php echo $category['id']; ?>">
+                                <input type="text" name="category_name" value="<?php echo $category['name']; ?>" required>
+                                <button type="submit">Edit</button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php } ?>
+            </tbody>
+        </table>
+    <?php } else { ?>
+        <p>No categories available.</p>
+    <?php } ?>
+
 </body>
 </html>
 
