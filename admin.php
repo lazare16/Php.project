@@ -10,22 +10,32 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     exit();
 }
 
+// Debug: Print session data
+// echo '<pre>';
+// print_r($_SESSION);
+// echo '</pre>';
+
 // Handle PDF upload
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['upload_pdf'])) {
     $title = $_POST['title'];
     $file_path = $_POST['file_path']; // We are using URLs for PDFs
     $category_id = $_POST['category_id'];
 
-    $stmt = $conn->prepare("INSERT INTO pdfs (title, file_path, category_id, user_id) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("ssii", $title, $file_path, $category_id, $_SESSION['user_id']);
+    if (isset($_SESSION['user_id'])) {
+        $user_id = $_SESSION['user_id'];
+        $stmt = $conn->prepare("INSERT INTO pdfs (title, file_path, category_id, user_id) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("ssii", $title, $file_path, $category_id, $user_id);
 
-    if ($stmt->execute()) {
-        echo "PDF uploaded successfully.";
+        if ($stmt->execute()) {
+            echo "PDF uploaded successfully.";
+        } else {
+            echo "Error: " . $stmt->error;
+        }
+
+        $stmt->close();
     } else {
-        echo "Error: " . $stmt->error;
+        echo "Error: User ID is not set in the session.";
     }
-
-    $stmt->close();
 }
 
 // Handle new category addition
@@ -79,65 +89,49 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_pdf'])) {
     $stmt->close();
 }
 
-// Fetch categories
-$categories_result = $conn->query("SELECT * FROM categories");
+// Fetch and display PDFs
+$result = $conn->query("SELECT pdfs.*, categories.name AS category_name FROM pdfs JOIN categories ON pdfs.category_id = categories.id");
 
-// Fetch PDFs
-$pdfs_result = $conn->query("SELECT * FROM pdfs");
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel</title>
 </head>
 <body>
     <h1>Admin Panel</h1>
-    <p>Welcome, <?php echo $_SESSION['username']; ?>! (<a href="logout.php">Logout</a>)</p>
-
-    <h2>Upload New PDF</h2>
     <form method="post" action="">
-        <input type="hidden" name="upload_pdf" value="1">
-        <label for="title">PDF Title:</label>
-        <input type="text" name="title" id="title" required><br>
-        <label for="file_path">PDF URL:</label>
-        <input type="url" name="file_path" id="file_path" required><br>
-        <label for="category_id">Category:</label>
-        <select name="category_id" id="category_id" required>
-            <?php while ($category = $categories_result->fetch_assoc()) { ?>
-                <option value="<?php echo $category['id']; ?>"><?php echo $category['name']; ?></option>
-            <?php } ?>
-        </select><br>
-        <button type="submit">Upload PDF</button>
+        <input type="text" name="title" placeholder="PDF Title" required>
+        <input type="url" name="file_path" placeholder="PDF URL" required>
+        <select name="category_id" required>
+            <?php
+            $categories_result = $conn->query("SELECT * FROM categories");
+            while ($category = $categories_result->fetch_assoc()) {
+                echo "<option value=\"{$category['id']}\">{$category['name']}</option>";
+            }
+            ?>
+        </select>
+        <button type="submit" name="upload_pdf">Upload PDF</button>
     </form>
-     
-    <h2>Add New Category</h2>
-    <form method="post" action="">
-        <input type="hidden" name="add_category" value="1">
-        <label for="category_name">Category Name:</label>
-        <input type="text" name="category_name" id="category_name" required><br>
-        <button type="submit">Add Category</button>
-    </form>
-
-    <h2>Manage PDFs</h2>
-    <?php if ($pdfs_result->num_rows > 0) { ?>
+    
+    <h2>Existing PDFs</h2>
+    <?php if ($result->num_rows > 0) { ?>
         <table>
             <thead>
                 <tr>
                     <th>Title</th>
-                    <th>URL</th>
                     <th>Category</th>
+                    <th>File Path</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                <?php while ($pdf = $pdfs_result->fetch_assoc()) { ?>
+                <?php while ($pdf = $result->fetch_assoc()) { ?>
                     <tr>
                         <td><?php echo $pdf['title']; ?></td>
-                        <td><a href="<?php echo $pdf['file_path']; ?>" target="_blank">View PDF</a></td>
-                        <td><?php echo $pdf['category_id']; ?></td>
+                        <td><?php echo $pdf['category_name']; ?></td>
+                        <td><a href="<?php echo $pdf['file_path']; ?>">View PDF</a></td>
                         <td>
                             <form method="post" action="" style="display:inline;">
                                 <input type="hidden" name="delete_pdf" value="1">
@@ -169,7 +163,6 @@ $pdfs_result = $conn->query("SELECT * FROM pdfs");
     <?php } else { ?>
         <p>No PDFs available.</p>
     <?php } ?>
-
 </body>
 </html>
 
