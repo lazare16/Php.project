@@ -1,73 +1,121 @@
 <?php
-// index.php
-
 include 'connection.php';
-
 session_start();
 
-// Check if user is logged in
-if (isset($_SESSION['username'])) {
-    echo "Welcome, " . $_SESSION['username'] . "!<br>";
+// Fetch categories
+$categories_query = "SELECT * FROM categories";
+$categories_result = mysqli_query($conn, $categories_query);
 
-    // Show admin panel link for admin users
-    if ($_SESSION['role'] === 'admin') {
-        echo '<a href="admin.php">Admin Panel</a><br>';
-    }
+// Fetch PDFs based on selected category
+$category_filter = isset($_GET['category']) ? $_GET['category'] : '';
+$category_condition = $category_filter ? "WHERE pdfs.category_id = '$category_filter'" : '';
 
-    // Fetch categories
-    $categories_result = $conn->query("SELECT * FROM categories");
-    if ($categories_result->num_rows > 0) {
-        echo "<form method='get' action=''>";
-        echo "<select name='category_id'>";
-        echo "<option value='0'>All Categories</option>";
-        while ($category = $categories_result->fetch_assoc()) {
-            $selected = isset($_GET['category_id']) && $_GET['category_id'] == $category['id'] ? 'selected' : '';
-            echo "<option value='{$category['id']}' $selected>{$category['name']}</option>";
-        }
-        echo "</select>";
-        echo "<button type='submit'>Filter</button>";
-        echo "</form>";
-    }
+$query = "SELECT pdfs.*, categories.name AS category_name, users.username FROM pdfs
+          JOIN categories ON pdfs.category_id = categories.id
+          JOIN users ON pdfs.user_id = users.id
+          $category_condition";
+$result = mysqli_query($conn, $query);
 
-    // Fetch and display PDFs
-    $category_id = isset($_GET['category_id']) ? intval($_GET['category_id']) : 0;
-    $sql = "SELECT * FROM pdfs";
-    if ($category_id) {
-        $sql .= " WHERE category_id = " . $category_id;
-    }
-    $result = $conn->query($sql);
-
-    if ($result->num_rows > 0) {
-        echo "<ul>";
-        while ($row = $result->fetch_assoc()) {
-            echo "<li><a href='" . $row['file_path'] . "' target='_blank'>" . $row['title'] . "</a>";
-            echo " <form method='post' action='like.php' style='display:inline;'>
-                    <input type='hidden' name='pdf_id' value='" . $row['id'] . "'>
-                    <button type='submit'>Like</button>
-                  </form></li>";
-        }
-        echo "</ul>";
+// Handle comment submission
+if (isset($_POST['submit_comment'])) {
+    $pdf_id = $_POST['pdf_id'];
+    $user_id = $_SESSION['user_id']; // Assumes the user is logged in and user_id is stored in session
+    $comment_text = mysqli_real_escape_string($conn, $_POST['comment_text']);
+    
+    $insert_comment_query = "INSERT INTO pdf_comments (pdf_id, user_id, comment_text, comment_date) VALUES ('$pdf_id', '$user_id', '$comment_text', NOW())";
+    if (mysqli_query($conn, $insert_comment_query)) {
+        echo "Comment added successfully.";
     } else {
-        echo "No PDFs available.";
+        echo "Error: " . mysqli_error($conn);
     }
-
-    echo '<a href="logout.php">Logout</a>';
-} else {
-    echo '<a href="register.php">Register</a> | <a href="login.php">Login</a>';
 }
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
-
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF</title>
+    <title>PDF List</title>
 </head>
-
 <body>
-    
-</body>
+    <h1>PDF List</h1>
 
+    <!-- Category Filter -->
+    <form method="GET" action="">
+        <label for="category">Filter by Category:</label>
+        <select name="category" id="category">
+            <option value="">All</option>
+            <?php while ($category = mysqli_fetch_assoc($categories_result)) : ?>
+                <option value="<?php echo $category['id']; ?>" <?php echo $category_filter == $category['id'] ? 'selected' : ''; ?>>
+                    <?php echo $category['name']; ?>
+                </option>
+            <?php endwhile; ?>
+        </select>
+        <button type="submit">Filter</button>
+    </form>
+
+    <?php while ($row = mysqli_fetch_assoc($result)) : ?>
+        <div>
+            <h2><?php echo $row['title']; ?></h2>
+            <p>Category: <?php echo $row['category_name']; ?></p>
+            <p>Uploaded by: <?php echo $row['username']; ?></p>
+            <p><a href="<?php echo $row['file_path']; ?>">Download PDF</a></p>
+
+            <!-- Likes functionality -->
+            <p>
+                <?php
+                $pdf_id = $row['id'];
+                $likes_query = "SELECT COUNT(*) AS like_count FROM pdf_likes WHERE pdf_id = '$pdf_id'";
+                $likes_result = mysqli_query($conn, $likes_query);
+                $likes_row = mysqli_fetch_assoc($likes_result);
+                $like_count = $likes_row['like_count'];
+
+                if (isset($_SESSION['user_id'])) {
+                    $user_id = $_SESSION['user_id'];
+                    $user_like_query = "SELECT * FROM pdf_likes WHERE pdf_id = '$pdf_id' AND user_id = '$user_id'";
+                    $user_like_result = mysqli_query($conn, $user_like_query);
+                    $user_has_liked = mysqli_num_rows($user_like_result) > 0;
+
+                    if ($user_has_liked) {
+                        echo "<a href='unlike.php?pdf_id=$pdf_id'>Unlike</a>";
+                    } else {
+                        echo "<a href='like.php?pdf_id=$pdf_id'>Like</a>";
+                    }
+                }
+
+                echo " ($like_count likes)";
+                ?>
+            </p>
+
+            <!-- Comments section -->
+            <h3>Comments</h3>
+            <?php
+            $comments_query = "SELECT pdf_comments.*, users.username FROM pdf_comments
+                               JOIN users ON pdf_comments.user_id = users.id
+                               WHERE pdf_comments.pdf_id = '$pdf_id'
+                               ORDER BY pdf_comments.comment_date DESC";
+            $comments_result = mysqli_query($conn, $comments_query);
+            ?>
+            <ul>
+                <?php while ($comment = mysqli_fetch_assoc($comments_result)) : ?>
+                    <li>
+                        <strong><?php echo $comment['username']; ?>:</strong>
+                        <?php echo $comment['comment_text']; ?>
+                        <em>(<?php echo $comment['comment_date']; ?>)</em>
+                    </li>
+                <?php endwhile; ?>
+            </ul>
+
+            <!-- Comment form -->
+            <?php if (isset($_SESSION['user_id'])) : ?>
+                <form method="post" action="">
+                    <textarea name="comment_text" required></textarea>
+                    <input type="hidden" name="pdf_id" value="<?php echo $row['id']; ?>">
+                    <button type="submit" name="submit_comment">Submit Comment</button>
+                </form>
+            <?php else : ?>
+                <p>Please <a href="login.php">login</a> to leave a comment.</p>
+            <?php endif; ?>
+        </div>
+    <?php endwhile; ?>
+</body>
 </html>
