@@ -111,6 +111,7 @@ if (isset($_POST['submit_comment'])) {
                     <textarea name="comment_text" required></textarea>
                     <input type="hidden" name="pdf_id" value="<?php echo $row['id']; ?>">
                     <button type="submit" name="submit_comment">Submit Comment</button>
+                    <a href="logout.php">Logout</a>
                 </form>
             <?php else : ?>
                 <p>Please <a href="login.php">login</a> to leave a comment.</p>

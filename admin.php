@@ -288,6 +288,9 @@ $result = $conn->query($query)
             ?>
         </tbody>
     </table>
+    <?php include 'display_likes.php'; ?>
+    <br>
+    <?php include 'display_comments.php'; ?>
 </body>
 </html>
 
