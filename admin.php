@@ -1,19 +1,19 @@
 <?php
-// admin.php
+
 
 include 'connection.php';
 session_start();
 
-// Check if the user is logged in and is an admin
+
 if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     header("Location: index.php");
     exit();
 }
 
-// Handle PDF upload
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['upload_pdf'])) {
     $title = $_POST['title'];
-    $file_path = $_POST['file_path']; // We are using URLs for PDFs
+    $file_path = $_POST['file_path']; 
     $category_id = $_POST['category_id'];
 
     if (isset($_SESSION['user_id'])) {
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['upload_pdf'])) {
     }
 }
 
-// Handle new category addition
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_category'])) {
     $category_name = $_POST['category_name'];
 
@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_category'])) {
     $stmt->close();
 }
 
-// Handle PDF deletion
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_pdf'])) {
     $pdf_id = $_POST['pdf_id'];
 
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_pdf'])) {
     $stmt->close();
 }
 
-// Handle PDF update
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_pdf'])) {
     $pdf_id = $_POST['pdf_id'];
     $title = $_POST['title'];
@@ -84,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_pdf'])) {
     $stmt->close();
 }
 
-// Handle category deletion
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_category'])) {
     $category_id = $_POST['category_id'];
 
@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_category'])) {
     $stmt->close();
 }
 
-// Handle category update
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_category'])) {
     $category_id = $_POST['category_id'];
     $category_name = $_POST['category_name'];
@@ -117,15 +117,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['edit_category'])) {
     $stmt->close();
 }
 
-// Fetch and display PDFs
+
 $result_pdfs = $conn->query("SELECT pdfs.*, categories.name AS category_name FROM pdfs JOIN categories ON pdfs.category_id = categories.id");
 
-// Fetch and display categories
+
 $result_categories = $conn->query("SELECT * FROM categories");
 
 
 
-// Handle user deletion
+
 if (isset($_GET['delete'])) {
     $id = $_GET['delete'];
     $deleteQuery = "DELETE FROM users WHERE id = ?";
@@ -135,7 +135,7 @@ if (isset($_GET['delete'])) {
     $stmt->close();
 }
 
-// Fetch users from the database
+
 $query = "SELECT id, username, email FROM users";
 $result = $conn->query($query)
 ?>
@@ -206,7 +206,6 @@ $result = $conn->query($query)
                                 <input type="url" name="file_path" value="<?php echo $pdf['file_path']; ?>" required>
                                 <select name="category_id" required>
                                     <?php 
-                                    // Fetch categories again for each row
                                     $categories_result = $conn->query("SELECT * FROM categories"); 
                                     while ($category = $categories_result->fetch_assoc()) { 
                                         $selected = $pdf['category_id'] == $category['id'] ? 'selected' : '';

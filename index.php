@@ -2,11 +2,11 @@
 include 'connection.php';
 session_start();
 
-// Fetch categories
+
 $categories_query = "SELECT * FROM categories";
 $categories_result = mysqli_query($conn, $categories_query);
 
-// Fetch PDFs based on selected category
+
 $category_filter = isset($_GET['category']) ? $_GET['category'] : '';
 $category_condition = $category_filter ? "WHERE pdfs.category_id = '$category_filter'" : '';
 
@@ -16,10 +16,10 @@ $query = "SELECT pdfs.*, categories.name AS category_name, users.username FROM p
           $category_condition";
 $result = mysqli_query($conn, $query);
 
-// Handle comment submission
+
 if (isset($_POST['submit_comment'])) {
     $pdf_id = $_POST['pdf_id'];
-    $user_id = $_SESSION['user_id']; // Assumes the user is logged in and user_id is stored in session
+    $user_id = $_SESSION['user_id']; 
     $comment_text = mysqli_real_escape_string($conn, $_POST['comment_text']);
     
     $insert_comment_query = "INSERT INTO pdf_comments (pdf_id, user_id, comment_text, comment_date) VALUES ('$pdf_id', '$user_id', '$comment_text', NOW())";
@@ -39,7 +39,7 @@ if (isset($_POST['submit_comment'])) {
 <body>
     <h1>PDF List</h1>
 
-    <!-- Category Filter -->
+
     <form method="GET" action="">
         <label for="category">Filter by Category:</label>
         <select name="category" id="category">
@@ -60,7 +60,7 @@ if (isset($_POST['submit_comment'])) {
             <p>Uploaded by: <?php echo $row['username']; ?></p>
             <p><a href="<?php echo $row['file_path']; ?>">Download PDF</a></p>
 
-            <!-- Likes functionality -->
+
             <p>
                 <?php
                 $pdf_id = $row['id'];
@@ -86,7 +86,7 @@ if (isset($_POST['submit_comment'])) {
                 ?>
             </p>
 
-            <!-- Comments section -->
+
             <h3>Comments</h3>
             <?php
             $comments_query = "SELECT pdf_comments.*, users.username FROM pdf_comments
@@ -105,7 +105,7 @@ if (isset($_POST['submit_comment'])) {
                 <?php endwhile; ?>
             </ul>
 
-            <!-- Comment form -->
+
             <?php if (isset($_SESSION['user_id'])) : ?>
                 <form method="post" action="">
                     <textarea name="comment_text" required></textarea>

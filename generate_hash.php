@@ -1,5 +1,5 @@
 <?php
-$password = 'adminUser'; // the plain text password
+$password = 'adminUser'; 
 $hash = password_hash($password, PASSWORD_DEFAULT);
 echo $hash;
 ?>
