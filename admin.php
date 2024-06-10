@@ -123,12 +123,40 @@ $result_pdfs = $conn->query("SELECT pdfs.*, categories.name AS category_name FRO
 // Fetch and display categories
 $result_categories = $conn->query("SELECT * FROM categories");
 
+
+
+// Handle user deletion
+if (isset($_GET['delete'])) {
+    $id = $_GET['delete'];
+    $deleteQuery = "DELETE FROM users WHERE id = ?";
+    $stmt = $conn->prepare($deleteQuery);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $stmt->close();
+}
+
+// Fetch users from the database
+$query = "SELECT id, username, email FROM users";
+$result = $conn->query($query)
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
     <title>Admin Panel</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
 </head>
 <body>
     <h1>Admin Panel</h1>
@@ -237,6 +265,29 @@ $result_categories = $conn->query("SELECT * FROM categories");
         <p>No categories available.</p>
     <?php } ?>
 
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            while ($row = $result->fetch_assoc()) {
+                echo "<tr>";
+                echo "<td>" . $row['id'] . "</td>";
+                echo "<td>" . $row['username'] . "</td>";
+                echo "<td>" . $row['email'] . "</td>";
+                echo "<td><a href='admin.php?delete=" . $row['id'] . "' onclick='return confirm(\"Are you sure you want to delete this user?\");'>Delete</a></td>";
+                echo "</tr>";
+            }
+            ?>
+        </tbody>
+    </table>
 </body>
 </html>
 
