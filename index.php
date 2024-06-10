@@ -40,7 +40,11 @@ if (isset($_SESSION['username'])) {
     if ($result->num_rows > 0) {
         echo "<ul>";
         while ($row = $result->fetch_assoc()) {
-            echo "<li><a href='" . $row['file_path'] . "' target='_blank'>" . $row['title'] . "</a></li>";
+            echo "<li><a href='" . $row['file_path'] . "' target='_blank'>" . $row['title'] . "</a>";
+            echo " <form method='post' action='like.php' style='display:inline;'>
+                    <input type='hidden' name='pdf_id' value='" . $row['id'] . "'>
+                    <button type='submit'>Like</button>
+                  </form></li>";
         }
         echo "</ul>";
     } else {
@@ -52,6 +56,7 @@ if (isset($_SESSION['username'])) {
     echo '<a href="register.php">Register</a> | <a href="login.php">Login</a>';
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
